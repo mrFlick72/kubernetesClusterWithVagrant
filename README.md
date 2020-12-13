@@ -5,7 +5,7 @@ your vagrant machine and run the k8s_init playbook in order to run the final ste
 
 ```
 vagrant up && ansible-playbook -i inventory k8s_init.yml
-``
+```
 
 If you are interested to test the environment you can choose a simple app like below:
 
