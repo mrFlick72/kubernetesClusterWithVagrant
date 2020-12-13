@@ -8,6 +8,7 @@ ansible_ssh_common_args="-o StrictHostKeyChecking=no"
 [worker]
 10.10.0.11
 10.10.0.12
+10.10.0.13
 
 [worker:vars]
 ansible_ssh_private_key_file="~/.vagrant.d/insecure_private_key"

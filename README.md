@@ -1,15 +1,17 @@
 # Vagrant Setup
 
-In order to custumize your k88 cluster edit the Vagrantfile to add or remove nodes as you wish. After that run this comand to ask to Vagrant to provision 
-your vagrant machine and run the k8s_init playbook in order to run the final step to configure your cluster
-
-### tips
-In case of network clash, don't worry you can change from vagrant all the needed. Right now pay attention to edit accordingly the Ansible inventory file in the repo
+In order to custumize your k8s cluster edit the Vagrantfile to add or remove nodes as you wish. 
+After that run this comand to ask to Vagrant to provision your vagrant machine and run the k8s_init playbook in order to run the final step to configure your cluster. The command is below:
 
 ```
 vagrant up && ansible-playbook -i inventory k8s_init.yml
 ```
 
+### tips
+In case of network clash, don't worry you can change from vagrant all the needed.
+Right now pay attention to edit accordingly the Ansible inventory file in the repo
+
+# Sample Applications
 If you are interested to test the environment you can choose a simple app like below:
 
 ``` bash
