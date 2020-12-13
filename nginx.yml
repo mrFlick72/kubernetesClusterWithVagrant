@@ -1,0 +1,27 @@
+- hosts: all
+  become: true
+  tasks:
+  - name: server setup step 4 (disable SELinux)
+    shell:
+      cmd:  |
+        setenforce 0
+        sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+    args:
+      executable: /bin/bash  
+  - name: install nginx
+    yum:
+      name: nginx
+      state: present
+    
+  - name: start nginx
+    service:
+      name: nginx
+      enabled: yes
+      state: started
+
+  - name: unmask nginx
+    shell:
+      cmd:  |
+        systemctl unmask nginx.service
+    args:
+      executable: /bin/bash  

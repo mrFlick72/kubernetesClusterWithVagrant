@@ -1,0 +1,110 @@
+- hosts: all
+  become: true
+  tasks:
+  - name: Ensure br_netfilter is enabled.
+    modprobe:
+      name: br_netfilter
+      state: present
+    
+  - name: server setup step 1 (add repo)
+    shell:
+      cmd: |
+           cat << EOF > /etc/yum.repos.d/kubernetes.repo
+           [kubernetes]
+           name=Kubernetes
+           baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+           enabled=1
+           gpgcheck=0
+           repo_gpgcheck=0
+           gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+                  https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+           EOF
+    args:
+      executable: /bin/bash  
+      
+  - name: server setup step 2 (disable swap)
+    shell:
+      cmd: |
+           sed -i '/swap/d' /etc/fstab
+           swapoff -a
+    args:
+      executable: /bin/bash  
+              
+  - name: server setup step 3 (setup ip table)
+    shell:
+      cmd: |
+           echo "net.bridge.bridge-nf-call-iptables=1" | sudo tee -a /etc/sysctl.conf
+           echo "net.bridge.bridge-nf-call-ip6tables=1" | sudo tee -a /etc/sysctl.conf
+           echo "net.bridge.bridge-nf-call-arptables=1" | sudo tee -a /etc/sysctl.conf
+
+           sudo sysctl -p
+    args:
+      executable: /bin/bash  
+
+  - name: server setup step 4 (disable SELinux)
+    shell:
+      cmd:  |
+        setenforce 0
+        sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+    args:
+      executable: /bin/bash  
+
+  - name: install yum utils
+    yum:
+      name: yum-utils
+      state: latest
+
+  - name: add docker repo
+    shell:
+      cmd: yum-config-manager --add-repo  https://download.docker.com/linux/centos/docker-ce.repo
+    args:
+      executable: /bin/bash  
+
+  - name: install docker
+    yum:
+      name: docker-ce
+      state: latest
+
+  - name: install kubelet
+    yum:
+      name: kubelet
+      state: latest
+
+  - name:  install kubeadm
+    yum:
+      name: kubeadm
+      state: latest
+      
+  - name: install kubectl
+    yum:
+      name: kubectl
+      state: latest
+
+  - name: Start docker service
+    service:
+      name: docker
+      enabled: yes
+      state: started
+
+  - name: docker runnable as regular user
+    shell: usermod -aG docker vagrant
+    args:
+      executable: /bin/bash
+
+  - name: Start kubelet service
+    service:
+      name: kubelet
+      enabled: yes
+      state: started
+  
+  - name: Configure node ip
+    shell:
+      cmd: sed -i 's/$KUBELET_EXTRA_ARGS/$KUBELET_EXTRA_ARGS --node-ip {{ node_ip }}/g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+    args:
+      executable: /bin/bash
+      
+  - name: Restart kubelet 
+    service:
+      name: kubelet
+      daemon_reload: yes
+      state: restarted

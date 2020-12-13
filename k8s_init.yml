@@ -1,0 +1,91 @@
+# cluster init
+- hosts: master
+  become: yes
+  remote_user: vagrant
+  tasks:
+    - name: kubeadm init with pod network cidr confiuration
+      shell: kubeadm init --apiserver-advertise-address=10.10.0.10 --apiserver-cert-extra-sans=10.10.0.10 --pod-network-cidr=10.244.0.0/16 
+      args:
+        executable: /bin/bash
+      register: kubeadm_init_output
+
+    - name: prepare kubeadm join command
+      shell: kubeadm token create --print-join-command
+      args:
+        executable: /bin/bash
+      register: kubeadm_join_command
+
+    - name: admin.conf $HOME/.kube/config
+      become: no
+      become_method: sudo
+      shell:  |
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+      args:
+        executable: /bin/bash
+        
+    - name: echo
+      debug:
+        msg: "{{ kubeadm_join_command['stdout_lines'][0] }}"
+
+# worker cluster joining
+- hosts: worker
+  become: yes
+  remote_user: vagrant
+  tasks:
+    - name: join to the cluster
+      shell: "sudo {{ hostvars[groups['master'][0]]['kubeadm_join_command']['stdout_lines'][0] }}"
+      args:
+        executable: /bin/bash
+  
+# cluster network and ingress registration
+- hosts: master
+  become: no
+  remote_user: vagrant
+  tasks:
+    - name: copy kube-flannel in /home/vagrant
+      copy:
+        src: kube-flannel.yml
+        dest: /home/vagrant/kube-flannel.yml
+        owner: vagrant
+        group: vagrant
+
+    - name: install Flannel
+      shell: kubectl apply -f kube-flannel.yml
+      args:
+        executable: /bin/bash
+
+    - name: install Nginix Ingress Controller Mandatory
+      shell:  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.30.0/deploy/static/mandatory.yaml
+      args:
+        executable: /bin/bash
+
+    - name: install Nginix Ingress Controller deployment
+      shell: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.30.0/deploy/static/provider/baremetal/service-nodeport.yaml
+      args:
+        executable: /bin/bash
+
+    - name: ingress node port
+      shell: |-
+        kubectl get svc -n ingress-nginx | grep NodePort | awk '{ print $5 }' | awk -F , ' { print $1 } ' | awk -F : ' { print $2 } ' | awk -F / ' { print $1 } '
+      args:
+        executable: /bin/bash
+      register: kube_ingress_nodeport
+
+- hosts: balancer
+  become: yes
+  gather_facts: no
+  remote_user: vagrant
+  tasks:
+    - name: Copy file with owner and permissions
+      template:
+        src: nginx.conf
+        dest: /etc/nginx/nginx.conf
+        follow: yes
+
+    - name: start nginx
+      service:
+        name: nginx
+        daemon_reload: yes
+        state: restarted
