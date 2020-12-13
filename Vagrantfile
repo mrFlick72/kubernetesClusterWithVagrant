@@ -5,6 +5,7 @@ cluster = {
   "master" => { :ip => "10.10.0.10", :cpus => 2, :mem => 2048 , :disksize => "10GB", :playbook => "k8s_installation.yml"},
   "worker1" => { :ip => "10.10.0.11", :cpus => 2, :mem => 2048 , :disksize => "10GB", :playbook => "k8s_installation.yml"},
   "worker2" => { :ip => "10.10.0.12", :cpus => 2, :mem => 2048 , :disksize => "10GB", :playbook => "k8s_installation.yml"},
+  "worker3" => { :ip => "10.10.0.13", :cpus => 2, :mem => 2048 , :disksize => "10GB", :playbook => "k8s_installation.yml"},
   "balancer" => { :ip => "10.10.10.100", :publicIp => "10.10.100.100", :cpus => 1, :mem => 1024 , :disksize => "10GB", :playbook => "nginx.yml"}
 }
 
